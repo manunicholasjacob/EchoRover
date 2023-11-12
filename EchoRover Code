@@ -1,0 +1,114 @@
+// Define the connections to the HC-SR04 sensors
+const int trigPins[] = {2, 4, 6}; // TRIG pins for sensors 1, 2, and 3
+const int echoPins[] = {3, 5, 7}; // ECHO pins for sensors 1, 2, and 3
+const int numSensors = 3; // Number of sensors
+
+// Define the connections to the L298N Motor Driver
+const int motorAIn1 = 10;
+const int motorAIn2 = 11;
+const int motorBIn3 = 12;
+const int motorBIn4 = 13;
+const int enableA = 8;  // Use PWM pin for ENA
+const int enableB = 9;  // Use PWM pin for ENB
+
+// Variables to hold the current and last valid distance measurements for each sensor
+long currentDistance[numSensors];
+long lastValidDistance[numSensors] = {0, 0, 0}; // Initialize with no obstacles
+
+// Define a threshold for considering a value to be an error (in centimeters)
+const long errorThreshold = 150;
+
+void setup() {
+  Serial.begin(9600);
+  
+  // Initialize the motor control pins as outputs
+  pinMode(motorAIn1, OUTPUT);
+  pinMode(motorAIn2, OUTPUT);
+  pinMode(motorBIn3, OUTPUT);
+  pinMode(motorBIn4, OUTPUT);
+  pinMode(enableA, OUTPUT);
+  pinMode(enableB, OUTPUT);
+  
+  // Initialize the sensor pins
+  for (int i = 0; i < numSensors; i++) {
+    pinMode(trigPins[i], OUTPUT);
+    pinMode(echoPins[i], INPUT);
+  }
+}
+
+void loop() {
+  // Read and filter distances from all sensors
+  for (int i = 0; i < numSensors; i++) {
+    currentDistance[i] = measureDistance(trigPins[i], echoPins[i]);
+    
+    // Check if the current reading is significantly different from the last valid one
+    if (abs(currentDistance[i] - lastValidDistance[i]) > errorThreshold) {
+      // If the difference is too large, we assume it's an error and ignore this reading
+      currentDistance[i] = lastValidDistance[i]; // Keep the last valid reading
+    } else {
+      // If the reading is valid, update the last valid reading
+      lastValidDistance[i] = currentDistance[i];
+    }
+    
+    // Print the (filtered) distance
+    Serial.print("Sensor ");
+    Serial.print(i + 1);
+    Serial.print(": ");
+    Serial.print(currentDistance[i]);
+    Serial.println(" cm");
+  }
+  
+  // Motor control logic based on sensor distances
+  if (currentDistance[0] > 25) {
+    // Both motors rotate if sensor 1 is more than 25 cm
+    rotateMotor(motorAIn1, motorAIn2, enableA, 255);
+    rotateMotor(motorBIn3, motorBIn4, enableB, 255);
+  } else {
+    // Conditions for Motor A
+    if (currentDistance[0] < 25 && currentDistance[1] > 25) {
+      // Rotate Motor A if Sensor 1 is less than 25 cm and Sensor 2 is greater than 25 cm
+      rotateMotor(motorAIn1, motorAIn2, enableA, 255);
+    } else {
+      stopMotor(motorAIn1, motorAIn2, enableA);
+    }
+
+    // Conditions for Motor B
+    if (currentDistance[0] < 25 && currentDistance[1] < 25 && currentDistance[2] > 25) {
+      // Rotate Motor B if Sensor 1 and Sensor 2 are less than 25 cm, and Sensor 3 is greater than 25 cm
+      rotateMotor(motorBIn3, motorBIn4, enableB, 255);
+    } else {
+      stopMotor(motorBIn3, motorBIn4, enableB);
+    }
+  }
+  
+  // Wait before taking another measurement
+  delay(100);
+}
+
+long measureDistance(int trigPin, int echoPin) {
+  // Send a pulse
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  
+  // Read the echo
+  long duration = pulseIn(echoPin, HIGH);
+  
+  // Calculate the distance
+  long distance = duration * 0.034 / 2;
+  return distance;
+}
+
+void rotateMotor(int pinIn1, int pinIn2, int pinEnable, int speed) {
+  digitalWrite(pinIn1, LOW);
+  digitalWrite(pinIn2, HIGH);
+  analogWrite(pinEnable, speed); // Set the speed
+}
+
+void stopMotor(int pinIn1, int pinIn2, int pinEnable) {
+  digitalWrite(pinIn1, LOW);
+  digitalWrite(pinIn2, LOW);
+  analogWrite(pinEnable, 0); // Stop the motor
+}
