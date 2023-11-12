@@ -1,0 +1,44 @@
+// Define the connections to the L298N Motor Driver
+const int motorAIn1 = 10;
+const int motorAIn2 = 11;
+const int motorBIn3 = 12;
+const int motorBIn4 = 13;
+const int enableA = 8;  // Use PWM pin for ENA
+const int enableB = 9;  // Use PWM pin for ENB
+
+void setup() {
+  // Initialize the motor control pins as outputs
+  pinMode(motorAIn1, OUTPUT);
+  pinMode(motorAIn2, OUTPUT);
+  pinMode(motorBIn3, OUTPUT);
+  pinMode(motorBIn4, OUTPUT);
+  pinMode(enableA, OUTPUT);
+  pinMode(enableB, OUTPUT);
+}
+
+void loop() {
+  moveForward();
+  delay(2000); // Move forward for 2 seconds
+  moveBackward();
+  delay(2000); // Move backward for 2 seconds
+}
+
+void moveForward() {
+  // Set motors to move forward
+  digitalWrite(enableA, HIGH);
+  digitalWrite(enableB, HIGH);
+  digitalWrite(motorAIn1, HIGH);
+  digitalWrite(motorAIn2, LOW);
+  digitalWrite(motorBIn3, HIGH);
+  digitalWrite(motorBIn4, LOW);
+}
+
+void moveBackward() {
+  // Set motors to move backward
+  digitalWrite(enableA, HIGH);
+  digitalWrite(enableB, HIGH);
+  digitalWrite(motorAIn1, LOW);
+  digitalWrite(motorAIn2, HIGH);
+  digitalWrite(motorBIn3, LOW);
+  digitalWrite(motorBIn4, HIGH);
+}
